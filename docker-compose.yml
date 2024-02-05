@@ -1,0 +1,21 @@
+version: "3.9"
+services:
+  app:
+    image: golang:1.21
+    volumes:
+      - .:/app
+    ports:
+      - '3000:3000'
+    working_dir: /app
+    # for now, we will run the code manually using `docker compose exec`
+    command: go run server.go
+    # resource limitation definitions. reference: https://docs.docker.com/compose/compose-file/deploy/#resources
+    deploy:
+      resources:
+        limits:
+          cpus: '0.75'
+          memory: 75M
+        reservations:
+          cpus: '0.50'
+          memory: 50M
+

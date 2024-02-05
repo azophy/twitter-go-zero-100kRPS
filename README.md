@@ -14,11 +14,11 @@ For this project, I would assume this stack:
 
 ## Running
 ```
-# using go
-go run server.go
-
-# using docker compose
+# run docker compose
 docker compose up -d
+
+# run go-echo server
+docker compose exec app go run server.go
 
 # after that you could access the site
 curl localhost:3000
