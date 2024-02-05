@@ -8,7 +8,7 @@ services:
       - '3000:3000'
     working_dir: /app
     # for now, we will run the code manually using `docker compose exec`
-    command: go run server.go
+    command: tail -f /dev/null
     # resource limitation definitions. reference: https://docs.docker.com/compose/compose-file/deploy/#resources
     deploy:
       resources:
@@ -19,3 +19,25 @@ services:
           cpus: '0.50'
           memory: 50M
 
+  postgresql:
+    image: 'docker.io/bitnami/postgresql:11-debian-10'
+    ports:
+      - '5555:5432'
+    volumes:
+      - 'postgresql_data:/bitnami/postgresql'
+    environment:
+      - POSTGRESQL_USERNAME=postgres
+      - POSTGRESQL_PASSWORD=postgres
+      - POSTGRESQL_DATABASE=postgres
+    # resource limitation definitions. reference: https://docs.docker.com/compose/compose-file/deploy/#resources
+    deploy:
+      resources:
+        limits:
+          cpus: '0.75'
+          memory: 75M
+        reservations:
+          cpus: '0.50'
+          memory: 50M
+
+volumes:
+  postgresql_data:
