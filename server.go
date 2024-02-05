@@ -8,11 +8,18 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+// helper for setting env vars
+func getEnvOrDefault(string envName, string defaultValue) string {
+  val := os.Getenv(envName)
+  if val != "" {
+    return val
+  } else {
+    return defaultValue
+  }
+}
+
 func main() {
-	APP_PORT := os.Getenv("APP_PORT")
-	if APP_PORT == "" {
-		APP_PORT = "3000"
-	}
+	APP_PORT := getEnvOrDefault("APP_PORT",  "3000")
 
 	e := echo.New()
 
