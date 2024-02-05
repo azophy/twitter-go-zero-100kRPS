@@ -9,7 +9,7 @@ import (
 )
 
 // helper for setting env vars
-func getEnvOrDefault(string envName, string defaultValue) string {
+func getEnvOrDefault(envName string, defaultValue string) string {
   val := os.Getenv(envName)
   if val != "" {
     return val
@@ -25,7 +25,7 @@ func main() {
 
 	e.File("/", "public/index.html")
 
-	e.GET("/api/", func(c echo.Context) error {
+	e.GET("/api", func(c echo.Context) error {
 		return c.String(http.StatusOK, "ok")
 	})
 
