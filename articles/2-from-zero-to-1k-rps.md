@@ -13,7 +13,28 @@ content:
   - not all requests are equal
   - running golang with 'go run' vs using compiled binary is different. with compiled binary in my experience we could even reach 250k RPS!
 - start with wrk. with limited CPU & small wek params we only able to reach 1-5k RPS. after increasing the spec (both app & tester) + adding wrk params, we able to reach 100k.
+  - dont forget to monitor resource. If using htop or the like its hard to monitor containers usages. Instead I used [ctop](https://github.com/bcicen/ctop). run with `ctop -a` to only monitor active containers.
+  - `docker compose exec tester wrk -c 100 -t 10 --latency http://app:3000/api` -> small
+  - `docker compose exec tester wrk -c 500 -t 50 --latency http://app:3000/api` -> large. notice the number of connection & num of threads
 - are we done? lets check for DB-related APIs
 - now lets do breakpoint test
+  - `docker compose exec tester /app/k6 run tests/k6-breakpoint.js`
+  - the result would be much smaller because of the efficiency of both tools (wrk vs k6). how they count it would also be much different
+  - k6 need much larger memory compared to wrk
+  - disabling the check yield higher request
+  - somehow the latency of the app is higher compared to measured with wrk, thus it would be detected as slow request
+    - consequently its hard to push the cpu usage of our web API using this approach
+  - we could export the result. there are:
+    - summary
+    - detailed json. could be huge. 2 minutes breakpoint test yield 500MB file.
+
+  // below need more elaborate checks. req/s is different compared to text summary. its consume way to much memory. loading the data also very costly. 
+  - the tester container already included `k6-dashboard` package, that give us beatiful dashboard for reaading k6 load testing data
+  - `docker compose exec tester /app/k6 run --out web-dashboard tests/k6-breakpoint.js`
+    - we could monitor in realtime at localhost:5665
+    - to generate report automatically:
+    - `docker compose exec tester /app/k6 run --out "web-dashboard=export=test-report-$(date '+%Y%m%d-%H%M%S').html" tests/k6-breakpoint.js`
+
+
 
 
