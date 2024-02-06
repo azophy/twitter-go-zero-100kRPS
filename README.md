@@ -23,3 +23,14 @@ docker compose exec app go run server.go
 # after that you could access the site
 curl localhost:3000
 ````
+
+## Guide outline
+1. create basic web app. setup docker di for golang & postgres (with resource limitation). setup basic FE. db connection & migration. API for healtcheck, listing & posting. 
+2. loadtest with WRK for each API. breakpoint test with k6. analyze. profiling
+3. add caching. talk about race condition. use mutex. tune postgresql. loadtest & profiling
+4. add like feature. create like table. add API for liking & displaying. update FE. loadtest & profiling
+5. db optimization. materialized view. denormalizarestion. loadtest & profiling.
+6. implement connection pool & read replicas. loadtest & profiling
+
+- increase posttgfesql perf: https://stackoverflow.com/questions/5131266/increase-postgresql-write-speed-at-the-cost-of-likely-data-loss#5138794
+- psql read-write replica: https://gist.github.com/JosimarCamargo/40f8636563c6e9ececf603e94c3affa7
