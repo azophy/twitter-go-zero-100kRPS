@@ -24,12 +24,12 @@ services:
           cpus: '1'
           memory: 100M
 
-  postgresql:
+  postgres:
     image: 'docker.io/bitnami/postgresql:11-debian-10'
     ports:
       - '5555:5432'
     volumes:
-      - 'postgresql_data:/bitnami/postgresql'
+      - 'postgres_data:/bitnami/postgresql'
     environment:
       - POSTGRESQL_USERNAME=postgres
       - POSTGRESQL_PASSWORD=postgres
@@ -67,4 +67,4 @@ services:
           memory: 750M
 
 volumes:
-  postgresql_data:
+  postgres_data:

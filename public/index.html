@@ -21,8 +21,8 @@
                 <h1>Twitter's Go Client: From zero to 100k RPS</h1>
             </header>
             <form id="post_form" method="post" action="/api/posts">
-              <label for="user">Username of the poster</label>
-              <input type="text" name="user" id="user" placeholder="username">
+              <label for="username">Username of the poster</label>
+              <input type="text" name="username" id="username" placeholder="username">
 
               <label for="content">Post Content</label>
               <textarea name="content" id="content" placeholder="put your content here"></textarea>
@@ -63,14 +63,20 @@
 </body>
 
 <script>
-function fetch_posts(sort_by = 'time', after = '') {
-    return fetch(`/api/posts?sort_by=${sort_by}&after=${after}`)
+function fetch_posts() {
+    return fetch(`/api/posts`)
       .then(r => r.json())
       .then(r => r ?? {}) // handle if response is null
+      .then(posts => {
+        document.getElementById('post_feed').innerHTML =
+          posts.map(post => `
+              <aside id="post-${post.id}">
+                <p>${post.content}</p>
+                <em>by @${post.username} at ${post.timestamp}</em>
+              </aside>
+          `).join("\n");
+      })
 }
-
-function fetch_session() {
-    return fetch('/member/whoami').then(r => r.json())
-}
+fetch_posts()
 </script>
 </html>

@@ -17,6 +17,15 @@ content:
   - `docker compose exec tester wrk -c 100 -t 10 --latency http://app:3000/api` -> small
   - `docker compose exec tester wrk -c 500 -t 50 --latency http://app:3000/api` -> large. notice the number of connection & num of threads
 - are we done? lets check for DB-related APIs
+  - first lets try inserting our web with some data
+  - run wrk for our posts list endpoint
+    - `docker compose exec tester wrk -c 500 -t 50 --latency http://app:3000/api/posts`
+    - result, I only got ~1k RPS. if we see the server log, we also see something like: `pq: sorry, too many clients already`.
+  - now lets test our posts insert endpoint
+    - wrk support lua scripting for create POST from request
+    - `docker compose exec tester wrk -c 500 -t 50 -s tests/wrk-post.lua --latency http://app:3000/api/posts`
+    - this time, I only get ~200 RPS. way worse then the previous endpoint's result
+  - its clear that there are lots to do before we could reach 100k RPS for real-world scenario
 - now lets do breakpoint test
   - `docker compose exec tester /app/k6 run tests/k6-breakpoint.js`
   - the result would be much smaller because of the efficiency of both tools (wrk vs k6). how they count it would also be much different
@@ -28,7 +37,7 @@ content:
     - summary
     - detailed json. could be huge. 2 minutes breakpoint test yield 500MB file.
 
-  // below need more elaborate checks. req/s is different compared to text summary. its consume way to much memory. loading the data also very costly. 
+  // below need more elaborate checks. req/s is different compared to text summary. its consume way to much memory. loading the data also very costly.
   - the tester container already included `k6-dashboard` package, that give us beatiful dashboard for reaading k6 load testing data
   - `docker compose exec tester /app/k6 run --out web-dashboard tests/k6-breakpoint.js`
     - we could monitor in realtime at localhost:5665

@@ -2,6 +2,7 @@
 outline:
 - create basic web app
 - setup docker di for golang & postgres (with resource limitation)-
+  - why resource limit? to show the relationship between spec with performance
 - setup basic FE
 - db connection & migration
 - API for healtcheck, listing & posting
