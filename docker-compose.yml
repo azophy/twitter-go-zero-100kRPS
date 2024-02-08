@@ -1,18 +1,19 @@
 version: "3.9"
 services:
   app:
-    #image: golang:1.21-alpine
-    build:
-      context: .
-      dockerfile: app.Dockerfile
+    image: golang:1.21-alpine
+    #build:
+      #context: .
+      #dockerfile: app.Dockerfile
+      #dockerfile: dev.Dockerfile
     volumes:
       - .:/web
     ports:
       - '3000:3000'
     working_dir: /web
     # for now, we will run the code manually using `docker compose exec`
-    #command: tail -f /dev/null
-    command: /app/binary
+    command: tail -f /dev/null
+    #command: /app/binary
     # resource limitation definitions. reference: https://docs.docker.com/compose/compose-file/deploy/#resources
     deploy:
       resources:
@@ -56,14 +57,14 @@ services:
     working_dir: /web
     volumes:
       - .:/web
-    #deploy:
-      #resources:
-        #limits:
-          #cpus: '6'
-          #memory: 2G
-        #reservations:
-          #cpus: '0.75'
-          #memory: 750M
+    deploy:
+      resources:
+        limits:
+          cpus: '6'
+          memory: 2G
+        reservations:
+          cpus: '0.75'
+          memory: 750M
 
 volumes:
   postgresql_data:
