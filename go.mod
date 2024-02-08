@@ -3,6 +3,7 @@ module github.com/azophy/twitter-go-zero-to-100krps
 go 1.18
 
 require (
+	github.com/labstack/echo-contrib v0.15.0 // indirect
 	github.com/labstack/echo/v4 v4.11.4 // indirect
 	github.com/labstack/gommon v0.4.2 // indirect
 	github.com/lib/pq v1.10.9 // indirect

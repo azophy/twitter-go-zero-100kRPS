@@ -10,6 +10,7 @@ services:
       - .:/web
     ports:
       - '3000:3000'
+      - '5000:5000'
     working_dir: /web
     # for now, we will run the code manually using `docker compose exec`
     command: tail -f /dev/null

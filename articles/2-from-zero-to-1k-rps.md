@@ -26,6 +26,18 @@ content:
     - `docker compose exec tester wrk -c 500 -t 50 -s tests/wrk-post.lua --latency http://app:3000/api/posts`
     - this time, I only get ~200 RPS. way worse then the previous endpoint's result
   - its clear that there are lots to do before we could reach 100k RPS for real-world scenario
+- after we get some data about our API, lets try profiling our API to get better understanding
+  - reference:
+  - first install package `github.com/labstack/echo-contrib/pprof`, then register in our echo app
+  - re-run our app
+  - try to generate some load. we could use the same WRK setup as previous. try to do several times to gate accurate results we could compare against each other
+  - now in a new terminal run `go tool pprof -http=:5001 http://localhost:3000/debug/pprof/profile`. change the view into flamegraph to get more data.
+    - in my case for our listing endpoint, DB operations took 29% of our time
+    - while for our insert endpoint, DB operations took 64% of our time
+- lets try to fix by first imposing connection limit to golang connection pool
+  - adding connection limit to just 100 improve write performance to 1k RPS range
+  - reading performance on the other hands tanked to around 200s RPS, which is pretty unexpected
+
 - now lets do breakpoint test
   - `docker compose exec tester /app/k6 run tests/k6-breakpoint.js`
   - the result would be much smaller because of the efficiency of both tools (wrk vs k6). how they count it would also be much different

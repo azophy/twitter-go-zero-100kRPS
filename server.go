@@ -4,11 +4,13 @@ import (
   "os"
   "fmt"
   "time"
+  "strconv"
 	"net/http"
   "database/sql"
 
-	"github.com/labstack/echo/v4"
   _ "github.com/lib/pq"
+	"github.com/labstack/echo/v4"
+  "github.com/labstack/echo-contrib/pprof"
 )
 
 type Post struct {
@@ -31,6 +33,8 @@ func getEnvOrDefault(envName string, defaultValue string) string {
 func main() {
 	APP_PORT := getEnvOrDefault("APP_PORT",  "3000")
   DB_URI := getEnvOrDefault("DB_URI", "postgres://postgres:postgres@postgres/postgres?sslmode=disable")
+  // reference: https://pkg.go.dev/database/sql#DB.SetMaxOpenConns
+  DB_MAX_CONNECTION, _ := strconv.Atoi(getEnvOrDefault("DB_MAX_CONNECTION", "100"))
 
   fmt.Println("Connecting to database...")
   db_conn, err := sql.Open("postgres", DB_URI)
@@ -38,6 +42,8 @@ func main() {
       fmt.Println(err.Error())
       return
   }
+
+  db_conn.SetMaxOpenConns(DB_MAX_CONNECTION)
 
   fmt.Println("Starting migration...")
   migration := `
@@ -55,6 +61,8 @@ func main() {
   }
 
 	e := echo.New()
+
+  pprof.Register(e)
 
 	e.File("/", "public/index.html")
 
