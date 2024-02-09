@@ -11,6 +11,8 @@ services:
     ports:
       - '3000:3000'
       - '5000:5000'
+    #environment:
+      #- DB_MAX_CONNECTION=200
     working_dir: /web
     # for now, we will run the code manually using `docker compose exec`
     command: tail -f /dev/null
@@ -19,7 +21,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '6'
+          cpus: '5'
           memory: 1G
         reservations:
           cpus: '1'
@@ -31,6 +33,7 @@ services:
       - '5555:5432'
     volumes:
       - 'postgres_data:/bitnami/postgresql'
+      - './postgres.conf:/bitnami/postgresql/conf/postgres.conf'
     environment:
       - POSTGRESQL_USERNAME=postgres
       - POSTGRESQL_PASSWORD=postgres
@@ -39,7 +42,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1'
+          cpus: '5'
           memory: 1G
         reservations:
           cpus: '0.75'
@@ -61,7 +64,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '6'
+          cpus: '5'
           memory: 2G
         reservations:
           cpus: '0.75'
