@@ -33,7 +33,7 @@ services:
       - '5555:5432'
     volumes:
       - 'postgres_data:/bitnami/postgresql'
-      - './postgres.conf:/bitnami/postgresql/conf/postgres.conf'
+      - './postgres.conf:/bitnami/postgresql/conf/postgresql.conf'
     environment:
       - POSTGRESQL_USERNAME=postgres
       - POSTGRESQL_PASSWORD=postgres

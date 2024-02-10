@@ -2,6 +2,7 @@
 - we'll try basic DB optimizations that wouldn't change many app logic or db structures first:
 
 1. add docker setting for psql config file
+- confirm by running `docker compose exec postgres psql -U postgres -c 'show max_connections;'`
 2. add number of psql connection
 3. analyze difference
 4. add indexing
