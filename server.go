@@ -44,6 +44,8 @@ func main() {
   }
 
   db_conn.SetMaxOpenConns(DB_MAX_CONNECTION)
+  db_conn.SetMaxIdleConns(100)
+  db_conn.SetConnMaxLifetime(10 * time.Minute)
 
   fmt.Println("Starting migration...")
   migration := `
@@ -53,6 +55,7 @@ func main() {
       content VARCHAR (150) NOT NULL,
       timestamp TIMESTAMP NOT NULL DEFAULT NOW()
     );
+    -- CREATE INDEX IF NOT EXISTS idx_posts_timestamp ON posts(timestamp);
   `
   _, err = db_conn.Exec(migration)
   if err != nil {
