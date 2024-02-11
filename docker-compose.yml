@@ -12,7 +12,8 @@ services:
       - '3000:3000'
       - '5000:5000'
     #environment:
-      #- DB_MAX_CONNECTION=200
+      #- DB_MAX_OPEN_CONNECTION=500
+      #- DB_MAX_IDLE_CONNECTION=200
     working_dir: /web
     # for now, we will run the code manually using `docker compose exec`
     command: tail -f /dev/null

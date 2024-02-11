@@ -67,6 +67,19 @@ func main() {
       return
   }
 
+  // define prepared statements
+  readStmt, err := db_conn.Prepare("SELECT * FROM posts order by timestamp DESC LIMIT 10")
+  if err != nil {
+      fmt.Println(err.Error())
+      return
+  }
+  writeStmt, err := db_conn.Prepare("insert into posts(username, content) values ($1, $2)")
+  if err != nil {
+      fmt.Println(err.Error())
+      return
+  }
+
+  // route definitions
 	e := echo.New()
 
   if (PROFILING_ENABLED == "true") {
@@ -80,7 +93,7 @@ func main() {
 	})
 
 	e.GET("/api/posts", func(c echo.Context) error {
-    rows, err := db_conn.Query("SELECT * FROM posts order by timestamp DESC LIMIT 10")
+    rows, err := readStmt.Query()
     if err != nil {
         fmt.Println(err.Error())
         //return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
@@ -111,7 +124,7 @@ func main() {
     username := c.FormValue("username")
     content := c.FormValue("content")
 
-    _, err = db_conn.Exec("insert into posts(username, content) values ($1, $2)", username, content)
+    _, err = writeStmt.Exec(username, content)
     if err != nil {
         fmt.Println(err.Error())
         //return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
