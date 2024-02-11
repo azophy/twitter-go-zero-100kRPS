@@ -8,6 +8,9 @@
   - increasing number of connection increase the number of requests for write operations around 3x (from ~1k to 3k)
   - interestingly the read operations doesn't seems to be affected. If anything, it seemed to be decreasing
 4. add indexing
+  - basic intro to 'explain' query
+  - write doesn't seems to affected much
+  - read however, now we got ~35k RPS!!!
 5. analyze
 6. more db tuning
 7. analyze

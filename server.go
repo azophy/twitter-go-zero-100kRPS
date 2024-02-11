@@ -59,7 +59,7 @@ func main() {
       content VARCHAR (150) NOT NULL,
       timestamp TIMESTAMP NOT NULL DEFAULT NOW()
     );
-    -- CREATE INDEX IF NOT EXISTS idx_posts_timestamp ON posts(timestamp);
+    CREATE INDEX IF NOT EXISTS idx_posts_timestamp ON posts(timestamp);
   `
   _, err = db_conn.Exec(migration)
   if err != nil {
