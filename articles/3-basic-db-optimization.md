@@ -2,9 +2,11 @@
 - we'll try basic DB optimizations that wouldn't change many app logic or db structures first:
 
 1. add docker setting for psql config file
-- confirm by running `docker compose exec postgres psql -U postgres -c 'show max_connections;'`
 2. add number of psql connection
+  - confirm by running `docker compose exec postgres psql -U postgres -c 'show max_connections;'`
 3. analyze difference
+  - increasing number of connection increase the number of requests for write operations around 3x (from ~1k to 3k)
+  - interestingly the read operations doesn't seems to be affected. If anything, it seemed to be decreasing
 4. add indexing
 5. analyze
 6. more db tuning

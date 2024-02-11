@@ -34,7 +34,10 @@ func main() {
 	APP_PORT := getEnvOrDefault("APP_PORT",  "3000")
   DB_URI := getEnvOrDefault("DB_URI", "postgres://postgres:postgres@postgres/postgres?sslmode=disable")
   // reference: https://pkg.go.dev/database/sql#DB.SetMaxOpenConns
-  DB_MAX_CONNECTION, _ := strconv.Atoi(getEnvOrDefault("DB_MAX_CONNECTION", "100"))
+  DB_MAX_OPEN_CONNECTION, _ := strconv.Atoi(getEnvOrDefault("DB_MAX_OPEN_CONNECTION", "100"))
+  DB_MAX_IDLE_CONNECTION, _ := strconv.Atoi(getEnvOrDefault("DB_MAX_IDLE_CONNECTION", "10"))
+  // in seconds
+  DB_MAX_CONN_LIFETIME, _ := strconv.Atoi(getEnvOrDefault("DB_MAX_CONN_LIFETIME", "600"))
 
   fmt.Println("Connecting to database...")
   db_conn, err := sql.Open("postgres", DB_URI)
@@ -43,9 +46,9 @@ func main() {
       return
   }
 
-  db_conn.SetMaxOpenConns(DB_MAX_CONNECTION)
-  db_conn.SetMaxIdleConns(100)
-  db_conn.SetConnMaxLifetime(10 * time.Minute)
+  db_conn.SetMaxOpenConns(DB_MAX_OPEN_CONNECTION)
+  db_conn.SetMaxIdleConns(DB_MAX_IDLE_CONNECTION)
+  db_conn.SetConnMaxLifetime(time.Duration(DB_MAX_CONN_LIFETIME) * time.Second)
 
   fmt.Println("Starting migration...")
   migration := `
