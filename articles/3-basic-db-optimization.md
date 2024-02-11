@@ -13,6 +13,7 @@
 5. analyze
   - write doesn't seems to affected much
   - read however, now we got ~35k RPS!!!
+  - explain result: now it uses the index
   - pprof results: db query for read now taking only 23% or requests time
 6. more db tuning
 7. analyze
