@@ -33,6 +33,7 @@ func getEnvOrDefault(envName string, defaultValue string) string {
 func main() {
 	APP_PORT := getEnvOrDefault("APP_PORT",  "3000")
   DB_URI := getEnvOrDefault("DB_URI", "postgres://postgres:postgres@postgres/postgres?sslmode=disable")
+  PROFILING_ENABLED := getEnvOrDefault("PROFILING_ENABLED", "false")
   // reference: https://pkg.go.dev/database/sql#DB.SetMaxOpenConns
   DB_MAX_OPEN_CONNECTION, _ := strconv.Atoi(getEnvOrDefault("DB_MAX_OPEN_CONNECTION", "100"))
   DB_MAX_IDLE_CONNECTION, _ := strconv.Atoi(getEnvOrDefault("DB_MAX_IDLE_CONNECTION", "10"))
@@ -68,7 +69,9 @@ func main() {
 
 	e := echo.New()
 
-  pprof.Register(e)
+  if (PROFILING_ENABLED == "true") {
+    pprof.Register(e)
+  }
 
 	e.File("/", "public/index.html")
 
