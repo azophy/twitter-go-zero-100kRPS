@@ -7,11 +7,13 @@
 3. analyze difference
   - increasing number of connection increase the number of requests for write operations around 3x (from ~1k to 3k)
   - interestingly the read operations doesn't seems to be affected. If anything, it seemed to be decreasing
+  - pprof results: db query for read is taking 40% or requests time
 4. add indexing
   - basic intro to 'explain' query
+5. analyze
   - write doesn't seems to affected much
   - read however, now we got ~35k RPS!!!
-5. analyze
+  - pprof results: db query for read now taking only 23% or requests time
 6. more db tuning
 7. analyze
 8. conclusions
