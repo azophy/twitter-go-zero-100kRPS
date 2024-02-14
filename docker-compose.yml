@@ -22,7 +22,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '5'
+          cpus: '4'
           memory: 1G
         reservations:
           cpus: '1'
@@ -43,7 +43,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '5'
+          cpus: '4'
           memory: 1G
         reservations:
           cpus: '0.75'
@@ -65,8 +65,20 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '5'
+          cpus: '4'
           memory: 2G
+        reservations:
+          cpus: '0.75'
+          memory: 750M
+
+  redis:
+    image: redis:alpine
+    # resource limitation definitions. reference: https://docs.docker.com/compose/compose-file/deploy/#resources
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
         reservations:
           cpus: '0.75'
           memory: 750M

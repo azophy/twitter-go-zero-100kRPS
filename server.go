@@ -4,11 +4,15 @@ import (
   "os"
   "fmt"
   "time"
+  "context"
   "strconv"
 	"net/http"
   "database/sql"
+  "encoding/json"
 
   _ "github.com/lib/pq"
+
+  "github.com/redis/go-redis/v9"
 	"github.com/labstack/echo/v4"
   "github.com/labstack/echo-contrib/pprof"
 )
@@ -30,9 +34,84 @@ func getEnvOrDefault(envName string, defaultValue string) string {
   }
 }
 
+var (
+  backgroundCtx = context.Background()
+  rdb *redis.Client
+
+  db_conn *sql.DB
+  readStmt *sql.Stmt
+  writeStmt *sql.Stmt
+)
+
+func getPostHandler(c echo.Context) error {
+  var posts []Post
+
+  // retrieve from cache
+  postJson, err := rdb.Get(backgroundCtx, "posts").Result()
+  if err == nil {
+    err = json.Unmarshal([]byte(postJson), &posts)
+    if err != nil {
+        fmt.Println(err.Error())
+        //return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+        return err
+    }
+
+    return c.JSON(http.StatusOK, posts)
+  }
+
+  // lock before updating cache
+  _, err = rdb.SetNX(backgroundCtx, "post:lock", "true", 1*time.Second).Result()
+  if err != nil {
+    time.Sleep(100 * time.Millisecond)
+    return getPostHandler(c)
+  }
+  defer rdb.Del(backgroundCtx, "post:lock")
+
+  // retrieve from DB
+  rows, err := readStmt.Query()
+  if err != nil {
+      fmt.Println(err.Error())
+      //return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+      return err
+  }
+
+  defer rows.Close()
+
+  for rows.Next() {
+    var post Post
+    var timestamp string
+
+    err := rows.Scan(&post.ID, &post.Username, &post.Content, &timestamp)
+    if err != nil {
+      fmt.Println(err.Error())
+      return err
+    }
+
+    post.timestamp, _ = time.Parse(time.RFC3339, timestamp)
+    posts = append(posts, post)
+  }
+
+  postJsonByte, err := json.Marshal(posts)
+  if err != nil {
+      fmt.Println(err.Error())
+      //return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+      return err
+  }
+
+  err = rdb.Set(backgroundCtx, "posts", postJsonByte, 2 * time.Second).Err()
+  if err != nil {
+      fmt.Println(err.Error())
+      //return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+      return err
+  }
+
+  return c.JSON(http.StatusOK, posts)
+}
+
 func main() {
 	APP_PORT := getEnvOrDefault("APP_PORT",  "3000")
   DB_URI := getEnvOrDefault("DB_URI", "postgres://postgres:postgres@postgres/postgres?sslmode=disable")
+  REDIS_URL := getEnvOrDefault("REDIS_URL", "redis://redis:6379/0?protocol=3")
   PROFILING_ENABLED := getEnvOrDefault("PROFILING_ENABLED", "false")
   // reference: https://pkg.go.dev/database/sql#DB.SetMaxOpenConns
   DB_MAX_OPEN_CONNECTION, _ := strconv.Atoi(getEnvOrDefault("DB_MAX_OPEN_CONNECTION", "100"))
@@ -40,8 +119,24 @@ func main() {
   // in seconds
   DB_MAX_CONN_LIFETIME, _ := strconv.Atoi(getEnvOrDefault("DB_MAX_CONN_LIFETIME", "600"))
 
+  // connect to redis
+  fmt.Println("Connecting to redis...")
+  redisOpts, err := redis.ParseURL(REDIS_URL)
+  if err != nil {
+      panic(err)
+  }
+  rdb = redis.NewClient(redisOpts)
+  defer rdb.Close()
+
+  status, err := rdb.Ping(backgroundCtx).Result()
+  if err != nil {
+      fmt.Println("Redis connection was refused")
+  }
+  fmt.Println("Redis connected with status: " + status)
+
+  // connect to postgres
   fmt.Println("Connecting to database...")
-  db_conn, err := sql.Open("postgres", DB_URI)
+  db_conn, err = sql.Open("postgres", DB_URI)
   if err != nil {
       fmt.Println(err.Error())
       return
@@ -68,12 +163,12 @@ func main() {
   }
 
   // define prepared statements
-  readStmt, err := db_conn.Prepare("SELECT * FROM posts order by timestamp DESC LIMIT 10")
+  readStmt, err = db_conn.Prepare("SELECT * FROM posts order by timestamp DESC LIMIT 10")
   if err != nil {
       fmt.Println(err.Error())
       return
   }
-  writeStmt, err := db_conn.Prepare("insert into posts(username, content) values ($1, $2)")
+  writeStmt, err = db_conn.Prepare("insert into posts(username, content) values ($1, $2)")
   if err != nil {
       fmt.Println(err.Error())
       return
@@ -92,33 +187,7 @@ func main() {
 		return c.String(http.StatusOK, "ok")
 	})
 
-	e.GET("/api/posts", func(c echo.Context) error {
-    rows, err := readStmt.Query()
-    if err != nil {
-        fmt.Println(err.Error())
-        //return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
-        return err
-    }
-
-	  defer rows.Close()
-		var posts []Post
-
-		for rows.Next() {
-			var post Post
-			var timestamp string
-
-      err := rows.Scan(&post.ID, &post.Username, &post.Content, &timestamp)
-			if err != nil {
-				fmt.Println(err.Error())
-				return err
-			}
-
-			post.timestamp, _ = time.Parse(time.RFC3339, timestamp)
-			posts = append(posts, post)
-		}
-
-		return c.JSON(http.StatusOK, posts)
-	})
+  e.GET("/api/posts", getPostHandler)
 
 	e.POST("/api/posts", func(c echo.Context) error {
     username := c.FormValue("username")
