@@ -98,7 +98,7 @@ func getPostHandler(c echo.Context) error {
       return err
   }
 
-  err = rdb.Set(backgroundCtx, "posts", postJsonByte, 2 * time.Second).Err()
+  err = rdb.Set(backgroundCtx, "posts", postJsonByte, 80 * time.Second).Err()
   if err != nil {
       fmt.Println(err.Error())
       //return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
@@ -111,7 +111,7 @@ func getPostHandler(c echo.Context) error {
 func main() {
 	APP_PORT := getEnvOrDefault("APP_PORT",  "3000")
   DB_URI := getEnvOrDefault("DB_URI", "postgres://postgres:postgres@postgres/postgres?sslmode=disable")
-  REDIS_URL := getEnvOrDefault("REDIS_URL", "redis://redis:6379/0?protocol=3")
+  REDIS_URL := getEnvOrDefault("REDIS_URL", "redis://redis:6379/0?protocol=3&pool_size=800&min_idle_conns=500")
   PROFILING_ENABLED := getEnvOrDefault("PROFILING_ENABLED", "false")
   // reference: https://pkg.go.dev/database/sql#DB.SetMaxOpenConns
   DB_MAX_OPEN_CONNECTION, _ := strconv.Atoi(getEnvOrDefault("DB_MAX_OPEN_CONNECTION", "100"))
@@ -125,6 +125,7 @@ func main() {
   if err != nil {
       panic(err)
   }
+  fmt.Printf("redis opts: %+v\n", redisOpts)
   rdb = redis.NewClient(redisOpts)
   defer rdb.Close()
 
