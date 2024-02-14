@@ -19,9 +19,9 @@ func (c *Cache[ValType]) Reset() {
 	c.val = *new(ValType)
 }
 
-func (c *Cache[ValType]) Fetch(expireDuration time.Duration, loader func() ValType) (ValType, error) {
+func (c *Cache[ValType]) Fetch(expireDuration time.Duration, loader func() (ValType, error)) (ValType, error) {
+	var emptyVal ValType
 	if expireDuration < minExpireDurationDiff {
-		var emptyVal ValType
 		return emptyVal, errors.New("expireDuration is too small")
 	}
 
@@ -29,6 +29,7 @@ func (c *Cache[ValType]) Fetch(expireDuration time.Duration, loader func() ValTy
 	newExpireTime := now.Add(expireDuration)
 	if c.expireTime.Before(now) {
 		c.mtx.Lock()
+		defer c.mtx.Unlock()
 		// double check to make sure it haven't been updated "recently". here we
 		// avoid using `Equal()` check in case several `Fetch()` are being called
 		// almost at the same time. so some may have slightly different `now`
@@ -37,9 +38,12 @@ func (c *Cache[ValType]) Fetch(expireDuration time.Duration, loader func() ValTy
 		// acquire a new lock, thus defeating our lock mechanism here.
 		if c.expireTime.Sub(newExpireTime).Abs() > minExpireDurationDiff {
 			c.expireTime = newExpireTime
-			c.val = loader()
+			val, err := loader()
+			if err != nil {
+				return emptyVal, err
+			}
+			c.val = val
 		}
-		c.mtx.Unlock()
 	}
 
 	return c.val, nil

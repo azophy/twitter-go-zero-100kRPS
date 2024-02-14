@@ -1,16 +1,16 @@
 package main
 
 import (
-  "os"
-  "fmt"
-  "time"
-  "strconv"
+	"database/sql"
+	"fmt"
 	"net/http"
-  "database/sql"
+	"os"
+	"strconv"
+	"time"
 
-  _ "github.com/lib/pq"
+	"github.com/labstack/echo-contrib/pprof"
 	"github.com/labstack/echo/v4"
-  "github.com/labstack/echo-contrib/pprof"
+	_ "github.com/lib/pq"
 )
 
 type Post struct {
@@ -22,37 +22,39 @@ type Post struct {
 
 // helper for setting env vars
 func getEnvOrDefault(envName string, defaultValue string) string {
-  val := os.Getenv(envName)
-  if val != "" {
-    return val
-  } else {
-    return defaultValue
-  }
+	val := os.Getenv(envName)
+	if val != "" {
+		return val
+	} else {
+		return defaultValue
+	}
 }
 
 func main() {
-	APP_PORT := getEnvOrDefault("APP_PORT",  "3000")
-  DB_URI := getEnvOrDefault("DB_URI", "postgres://postgres:postgres@postgres/postgres?sslmode=disable")
-  PROFILING_ENABLED := getEnvOrDefault("PROFILING_ENABLED", "false")
-  // reference: https://pkg.go.dev/database/sql#DB.SetMaxOpenConns
-  DB_MAX_OPEN_CONNECTION, _ := strconv.Atoi(getEnvOrDefault("DB_MAX_OPEN_CONNECTION", "100"))
-  DB_MAX_IDLE_CONNECTION, _ := strconv.Atoi(getEnvOrDefault("DB_MAX_IDLE_CONNECTION", "10"))
-  // in seconds
-  DB_MAX_CONN_LIFETIME, _ := strconv.Atoi(getEnvOrDefault("DB_MAX_CONN_LIFETIME", "600"))
+	APP_PORT := getEnvOrDefault("APP_PORT", "3000")
+	DB_URI := getEnvOrDefault("DB_URI", "postgres://postgres:postgres@postgres/postgres?sslmode=disable")
+	PROFILING_ENABLED := getEnvOrDefault("PROFILING_ENABLED", "false")
+	// reference: https://pkg.go.dev/database/sql#DB.SetMaxOpenConns
+	DB_MAX_OPEN_CONNECTION, _ := strconv.Atoi(getEnvOrDefault("DB_MAX_OPEN_CONNECTION", "100"))
+	DB_MAX_IDLE_CONNECTION, _ := strconv.Atoi(getEnvOrDefault("DB_MAX_IDLE_CONNECTION", "10"))
+	// in seconds
+	DB_MAX_CONN_LIFETIME, _ := strconv.Atoi(getEnvOrDefault("DB_MAX_CONN_LIFETIME", "600"))
 
-  fmt.Println("Connecting to database...")
-  db_conn, err := sql.Open("postgres", DB_URI)
-  if err != nil {
-      fmt.Println(err.Error())
-      return
-  }
+	postsCache := Cache[[]Post]{}
 
-  db_conn.SetMaxOpenConns(DB_MAX_OPEN_CONNECTION)
-  db_conn.SetMaxIdleConns(DB_MAX_IDLE_CONNECTION)
-  db_conn.SetConnMaxLifetime(time.Duration(DB_MAX_CONN_LIFETIME) * time.Second)
+	fmt.Println("Connecting to database...")
+	db_conn, err := sql.Open("postgres", DB_URI)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 
-  fmt.Println("Starting migration...")
-  migration := `
+	db_conn.SetMaxOpenConns(DB_MAX_OPEN_CONNECTION)
+	db_conn.SetMaxIdleConns(DB_MAX_IDLE_CONNECTION)
+	db_conn.SetConnMaxLifetime(time.Duration(DB_MAX_CONN_LIFETIME) * time.Second)
+
+	fmt.Println("Starting migration...")
+	migration := `
     CREATE TABLE IF NOT EXISTS posts (
       id SERIAL PRIMARY KEY,
       username VARCHAR (30) NOT NULL,
@@ -61,30 +63,30 @@ func main() {
     );
     CREATE INDEX IF NOT EXISTS idx_posts_timestamp ON posts(timestamp);
   `
-  _, err = db_conn.Exec(migration)
-  if err != nil {
-      fmt.Println(err.Error())
-      return
-  }
+	_, err = db_conn.Exec(migration)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 
-  // define prepared statements
-  readStmt, err := db_conn.Prepare("SELECT * FROM posts order by timestamp DESC LIMIT 10")
-  if err != nil {
-      fmt.Println(err.Error())
-      return
-  }
-  writeStmt, err := db_conn.Prepare("insert into posts(username, content) values ($1, $2)")
-  if err != nil {
-      fmt.Println(err.Error())
-      return
-  }
+	// define prepared statements
+	readStmt, err := db_conn.Prepare("SELECT * FROM posts order by timestamp DESC LIMIT 10")
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	writeStmt, err := db_conn.Prepare("insert into posts(username, content) values ($1, $2)")
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 
-  // route definitions
+	// route definitions
 	e := echo.New()
 
-  if (PROFILING_ENABLED == "true") {
-    pprof.Register(e)
-  }
+	if PROFILING_ENABLED == "true" {
+		pprof.Register(e)
+	}
 
 	e.File("/", "public/index.html")
 
@@ -92,44 +94,56 @@ func main() {
 		return c.String(http.StatusOK, "ok")
 	})
 
-	e.GET("/api/posts", func(c echo.Context) error {
-    rows, err := readStmt.Query()
-    if err != nil {
-        fmt.Println(err.Error())
-        //return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
-        return err
-    }
-
-	  defer rows.Close()
+	getPostsFromDb := func() ([]Post, error) {
 		var posts []Post
 
+		rows, err := readStmt.Query()
+		if err != nil {
+			fmt.Println(err.Error())
+			//return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+			return posts, err
+		}
+
+		defer rows.Close()
 		for rows.Next() {
 			var post Post
 			var timestamp string
 
-      err := rows.Scan(&post.ID, &post.Username, &post.Content, &timestamp)
+			err := rows.Scan(&post.ID, &post.Username, &post.Content, &timestamp)
 			if err != nil {
 				fmt.Println(err.Error())
-				return err
+				return posts, err
 			}
 
 			post.timestamp, _ = time.Parse(time.RFC3339, timestamp)
 			posts = append(posts, post)
 		}
 
+		return posts, nil
+	}
+
+	e.GET("/api/posts", func(c echo.Context) error {
+		posts, err := postsCache.Fetch(500*time.Millisecond, getPostsFromDb)
+		//posts, err := getPostsFromDb()
+		if err != nil {
+			fmt.Println(err.Error())
+			//return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+			return err
+		}
+
 		return c.JSON(http.StatusOK, posts)
 	})
 
 	e.POST("/api/posts", func(c echo.Context) error {
-    username := c.FormValue("username")
-    content := c.FormValue("content")
+		username := c.FormValue("username")
+		content := c.FormValue("content")
 
-    _, err = writeStmt.Exec(username, content)
-    if err != nil {
-        fmt.Println(err.Error())
-        //return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
-        return err
-    }
+		_, err = writeStmt.Exec(username, content)
+		if err != nil {
+			fmt.Println(err.Error())
+			//return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+			return err
+		}
 		return c.HTML(http.StatusOK, "ok. return to <a href='/'>homepage</a>")
 	})
 
