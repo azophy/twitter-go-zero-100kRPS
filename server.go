@@ -16,7 +16,7 @@ import (
 
 const (
   POST_WORKER_TIMEOUT = 1000 // in milliseconds
-  POST_WORKER_CHUCK_SIZE = 350
+  POST_WORKER_CHUCK_SIZE = 500
 )
 
 type Post struct {
@@ -159,10 +159,10 @@ func main() {
 
   postChannel := make(chan []any)
 
-  go func() {
+  postWorker := func() {
     var postBuffer [][]any
     for { // run as background process
-      fmt.Println("starting cycle")
+      //fmt.Println("starting cycle")
       loop:
         for { // waiting for input/timeout
           select {
@@ -170,11 +170,11 @@ func main() {
               postBuffer = append(postBuffer, item)
               //fmt.Println("get data:", item)
               if (len(postBuffer) >= POST_WORKER_CHUCK_SIZE) {
-                fmt.Println("postBuffer full:", postBuffer)
+                //fmt.Println("postBuffer full:", postBuffer)
                 break loop
               }
             case <-time.After(time.Millisecond * POST_WORKER_TIMEOUT):
-              fmt.Printf("timeout. no activities under %d milliseconds: %v\n", POST_WORKER_TIMEOUT, postBuffer)
+              //fmt.Printf("timeout. no activities under %d milliseconds: %v\n", POST_WORKER_TIMEOUT, postBuffer)
               break loop
           }
         }
@@ -182,10 +182,12 @@ func main() {
       if (len(postBuffer) > 0) {
         go postToDb(postBuffer)
         postBuffer = [][]any{}
-        fmt.Println("clearing buffer:", postBuffer)
+        //fmt.Println("clearing buffer:", postBuffer)
       }
     }
-  }()
+  }
+
+  go postWorker()
 
 	e.POST("/api/posts", func(c echo.Context) error {
 		username := c.FormValue("username")
