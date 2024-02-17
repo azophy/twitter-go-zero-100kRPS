@@ -14,6 +14,11 @@ import (
 	_ "github.com/lib/pq"
 )
 
+const (
+  POST_WORKER_TIMEOUT = 1000 // in milliseconds
+  POST_WORKER_CHUCK_SIZE = 350
+)
+
 type Post struct {
 	ID        string    `json:"id" xml:"id" form:"id" query:"id"`
 	Username  string    `json:"username" xml:"username" form:"username" query:"username"`
@@ -152,11 +157,42 @@ func main() {
     return nil
   }
 
+  postChannel := make(chan []any)
+
+  go func() {
+    var postBuffer [][]any
+    for { // run as background process
+      fmt.Println("starting cycle")
+      loop:
+        for { // waiting for input/timeout
+          select {
+            case item := <- postChannel:
+              postBuffer = append(postBuffer, item)
+              //fmt.Println("get data:", item)
+              if (len(postBuffer) >= POST_WORKER_CHUCK_SIZE) {
+                fmt.Println("postBuffer full:", postBuffer)
+                break loop
+              }
+            case <-time.After(time.Millisecond * POST_WORKER_TIMEOUT):
+              fmt.Printf("timeout. no activities under %d milliseconds: %v\n", POST_WORKER_TIMEOUT, postBuffer)
+              break loop
+          }
+        }
+      // end of cycle
+      if (len(postBuffer) > 0) {
+        go postToDb(postBuffer)
+        postBuffer = [][]any{}
+        fmt.Println("clearing buffer:", postBuffer)
+      }
+    }
+  }()
+
 	e.POST("/api/posts", func(c echo.Context) error {
 		username := c.FormValue("username")
 		content := c.FormValue("content")
 
-		err = postToDb([][]any{ {username, content} })
+    postChannel <- []any{username, content}
+
 		if err != nil {
 			fmt.Println(err.Error())
 			//return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
