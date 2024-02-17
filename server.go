@@ -7,7 +7,7 @@ import (
 	"os"
 	"strconv"
 	"time"
-  "strings"
+  //"strings"
 
 	"github.com/labstack/echo-contrib/pprof"
 	"github.com/labstack/echo/v4"
@@ -16,7 +16,7 @@ import (
 
 const (
   POST_WORKER_TIMEOUT = 1000 // in milliseconds
-  POST_WORKER_CHUCK_SIZE = 500
+  POST_WORKER_CHUCK_SIZE = 100
 )
 
 type Post struct {
@@ -41,8 +41,8 @@ func main() {
 	DB_URI := getEnvOrDefault("DB_URI", "postgres://postgres:postgres@postgres/postgres?sslmode=disable")
 	PROFILING_ENABLED := getEnvOrDefault("PROFILING_ENABLED", "false")
 	// reference: https://pkg.go.dev/database/sql#DB.SetMaxOpenConns
-	DB_MAX_OPEN_CONNECTION, _ := strconv.Atoi(getEnvOrDefault("DB_MAX_OPEN_CONNECTION", "100"))
-	DB_MAX_IDLE_CONNECTION, _ := strconv.Atoi(getEnvOrDefault("DB_MAX_IDLE_CONNECTION", "10"))
+	DB_MAX_OPEN_CONNECTION, _ := strconv.Atoi(getEnvOrDefault("DB_MAX_OPEN_CONNECTION", "300"))
+	DB_MAX_IDLE_CONNECTION, _ := strconv.Atoi(getEnvOrDefault("DB_MAX_IDLE_CONNECTION", "200"))
 	// in seconds
 	DB_MAX_CONN_LIFETIME, _ := strconv.Atoi(getEnvOrDefault("DB_MAX_CONN_LIFETIME", "600"))
 
@@ -81,6 +81,24 @@ func main() {
 		fmt.Println(err.Error())
 		return
 	}
+
+  // prebuild all write queries
+  var writeStmts []sql.Stmt
+  writeQuery := "insert into posts(username, content) values"
+  for i:=0; i<=POST_WORKER_CHUCK_SIZE; i++ {
+    if (i>0) {
+      writeQuery += ", "
+    }
+    writeQuery += fmt.Sprintf("($%d, $%d)", (i*2+1), (i*2+2))
+    stmt, err := db_conn.Prepare(writeQuery)
+    if err != nil {
+      fmt.Println(err.Error())
+      return
+    }
+    writeStmts = append(writeStmts, *stmt)
+  }
+
+	//writeStmt, err := db_conn.Prepare("insert into posts(username, content) values ($1, $2)")
 	//writeStmt, err := db_conn.Prepare("insert into posts(username, content) values ($1, $2)")
 	//if err != nil {
 		//fmt.Println(err.Error())
@@ -142,12 +160,13 @@ func main() {
 
   postToDb := func(params [][]any) error {
     var queryParams []any
-    query := "insert into posts(username, content) values "
-    for idx, item := range params {
-      query += fmt.Sprintf("($%d, $%d), ", (idx*2+1), (idx*2+2))
+    paramLength := len(params)
+    //query := "insert into posts(username, content) values "
+    for _, item := range params {
+      //query += fmt.Sprintf("($%d, $%d), ", (idx*2+1), (idx*2+2))
       queryParams = append(queryParams, item...)
     }
-    _, err := db_conn.Exec(strings.TrimRight(query, ", "), queryParams...)
+    _, err := writeStmts[paramLength-1].Exec(queryParams...)
 		if err != nil {
 			fmt.Println(err.Error())
 			//return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
@@ -187,6 +206,8 @@ func main() {
     }
   }
 
+  go postWorker()
+  go postWorker()
   go postWorker()
 
 	e.POST("/api/posts", func(c echo.Context) error {
