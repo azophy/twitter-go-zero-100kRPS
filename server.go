@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"time"
+  "strings"
 
 	"github.com/labstack/echo-contrib/pprof"
 	"github.com/labstack/echo/v4"
@@ -75,11 +76,11 @@ func main() {
 		fmt.Println(err.Error())
 		return
 	}
-	writeStmt, err := db_conn.Prepare("insert into posts(username, content) values ($1, $2)")
-	if err != nil {
-		fmt.Println(err.Error())
-		return
-	}
+	//writeStmt, err := db_conn.Prepare("insert into posts(username, content) values ($1, $2)")
+	//if err != nil {
+		//fmt.Println(err.Error())
+		//return
+	//}
 
 	// route definitions
 	e := echo.New()
@@ -134,11 +135,28 @@ func main() {
 		return c.JSON(http.StatusOK, posts)
 	})
 
+  postToDb := func(params [][]any) error {
+    var queryParams []any
+    query := "insert into posts(username, content) values "
+    for idx, item := range params {
+      query += fmt.Sprintf("($%d, $%d), ", (idx*2+1), (idx*2+2))
+      queryParams = append(queryParams, item...)
+    }
+    _, err := db_conn.Exec(strings.TrimRight(query, ", "), queryParams...)
+		if err != nil {
+			fmt.Println(err.Error())
+			//return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+			return err
+		}
+
+    return nil
+  }
+
 	e.POST("/api/posts", func(c echo.Context) error {
 		username := c.FormValue("username")
 		content := c.FormValue("content")
 
-		_, err = writeStmt.Exec(username, content)
+		err = postToDb([][]any{ {username, content} })
 		if err != nil {
 			fmt.Println(err.Error())
 			//return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
