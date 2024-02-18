@@ -22,7 +22,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '5'
+          cpus: '7'
           memory: 2G
         reservations:
           cpus: '1'
@@ -65,7 +65,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '5'
+          cpus: '3'
           memory: 2G
         reservations:
           cpus: '0.75'
