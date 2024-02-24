@@ -1,0 +1,51 @@
+version: "3.9"
+services:
+  app:
+    image: golang:1.21-alpine
+    volumes:
+      - .:/web
+    ports:
+      - '3000:3000'
+    working_dir: /web
+    # for now, we will run the code manually using `docker compose exec`
+    command: tail -f /dev/null
+    # resource limitation definitions. reference: https://docs.docker.com/compose/compose-file/deploy/#resources
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+
+  postgres:
+    image: 'postgres:alpine'
+    ports:
+      - '5432:5432'
+    volumes:
+      - 'postgres_data:/var/lib/postgresql/data'
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    # resource limitation definitions. reference: https://docs.docker.com/compose/compose-file/deploy/#resources
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+
+  tester:
+    image: alpine
+    volumes:
+      - .:/web
+    working_dir: /web
+    entrypoint: ""
+    command: tail -f /dev/null
+    # resource limitation definitions. reference: https://docs.docker.com/compose/compose-file/deploy/#resources
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+
+volumes:
+  postgres_data:
