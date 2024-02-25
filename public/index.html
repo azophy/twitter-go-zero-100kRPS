@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<!-- MVP.css quickstart template: https://github.com/andybrewer/mvp/ -->
+
+<head>
+    <link rel="icon" href="https://via.placeholder.com/70x70">
+    <link rel="stylesheet" href="https://unpkg.com/mvp.css">
+
+    <meta charset="utf-8">
+    <meta name="description" content="My description">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Twitter-Go-100kRPS</title>
+</head>
+
+<body>
+    <main>
+        <section>
+            <header>
+                <h1>Twitter's Go Client: From zero to 100k RPS</h1>
+            </header>
+            <form id="post_form" method="post" action="/api/posts">
+              <label for="username">Username of the poster</label>
+              <input type="text" name="username" id="username" placeholder="username">
+
+              <label for="content">Post Content</label>
+              <textarea name="content" id="content" placeholder="put your content here"></textarea>
+
+              <button>Post</button>
+            </form>
+        </section>
+
+        <hr>
+
+        <section>
+            <header>
+              <h2>Post Feed</h2>
+            </header>
+        </section>
+
+        <section id="post_feed">
+              <aside>
+                <p>example post</p>
+                <em>by @user</em>
+              </aside>
+              <aside>
+                <p>example post</p>
+                <em>by @user</em>
+              </aside>
+              <aside>
+                <p>example post</p>
+                <em>by @user</em>
+              </aside>
+        </section>
+    </main>
+    <footer>
+        <hr>
+        <p>
+            <small>Contact info</small>
+        </p>
+    </footer>
+</body>
+
+<script>
+function fetch_posts() {
+    return fetch(`/api/posts`)
+      .then(r => r.json())
+      .then(r => r ?? {}) // handle if response is null
+      .then(posts => {
+        document.getElementById('post_feed').innerHTML =
+          posts.map(post => `
+              <aside id="post-${post.id}">
+                <p>${post.content}</p>
+                <em>by @${post.username} at ${post.timestamp}</em>
+              </aside>
+          `).join("\n");
+      })
+}
+fetch_posts()
+</script>
+</html>
