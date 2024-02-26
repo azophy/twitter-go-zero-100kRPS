@@ -19,7 +19,7 @@ type Post struct {
 	ID        string    `json:"id" xml:"id" form:"id" query:"id"`
 	Username  string    `json:"username" xml:"username" form:"username" query:"username"`
 	Content   string    `json:"content" xml:"content" form:"content" query:"content"`
-	timestamp time.Time `json:"timestamp" xml:"timestamp" form:"timestamp" query:"timestamp"`
+	Timestamp time.Time `json:"timestamp" xml:"timestamp" form:"timestamp" query:"timestamp"`
 }
 
 func main() {
@@ -44,7 +44,6 @@ func main() {
 		fmt.Println(err.Error())
 		return
 	}
-
 	e := echo.New()
 
 	e.File("/", "index.html")
@@ -54,7 +53,7 @@ func main() {
 	})
 
 	e.GET("/api/posts", func(c echo.Context) error {
-		rows, err := db_conn.Query("SELECT * FROM posts order by timestamp DESC LIMIT 10")
+		rows, err := db_conn.Query("SELECT * FROM posts ORDER BY timestamp DESC LIMIT 10")
 		if err != nil {
 			fmt.Println(err.Error())
 			return err
@@ -73,7 +72,7 @@ func main() {
 				return err
 			}
 
-			post.timestamp, _ = time.Parse(time.RFC3339, timestamp)
+			post.Timestamp, _ = time.Parse(time.RFC3339, timestamp)
 			posts = append(posts, post)
 		}
 
@@ -84,13 +83,12 @@ func main() {
 		username := c.FormValue("username")
 		content := c.FormValue("content")
 
-		_, err = db_conn.Exec("insert into posts(username, content) values ($1, $2)", username, content)
+		_, err = db_conn.Exec("INSERT INTO posts(username, content) VALUES ($1, $2)", username, content)
 		if err != nil {
 			fmt.Println(err.Error())
 			return err
 		}
 		return c.HTML(http.StatusOK, "ok. return to <a href='/'>homepage</a>")
 	})
-
 	e.Logger.Fatal(e.Start(":" + APP_PORT))
 }
